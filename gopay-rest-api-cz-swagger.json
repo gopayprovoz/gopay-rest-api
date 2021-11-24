@@ -1,0 +1,2177 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "title" : "GoPay technická dokumentace",
+    "version" : "master"
+  },
+  "paths" : {
+    "/api/oauth2/token" : {
+      "post" : {
+        "summary" : "Získání přístupového tokenu",
+        "description" : "Operace slouží k získání přístupového tokenu, který je používán ve všech dalších API operacích. Přístupové údaje jsou předávány v hlavičce `Authorization` zakódované v base64 ve formátu `ClientID:ClientSecret` podle [RFC 7617](https://datatracker.ietf.org/doc/html/rfc7617#section-2).",
+        "operationId" : "ziskani-pristupoveho-tokenu",
+        "consumes" : [
+          "application/x-www-form-urlencoded"
+        ],
+        "parameters" : [
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/x-www-form-urlencoded`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/x-www-form-urlencoded"
+          },
+          {
+            "name" : "Aurhorization",
+            "in" : "header",
+            "description" : "Basic HTTP autentizace viz výše",
+            "required" : true,
+            "type" : "string",
+            "example" : "Basic MTA2MTM5OTE2MzpzdERUbVZYRg=="
+          },
+          {
+            "name" : "scope",
+            "in" : "formData",
+            "description" : "Rozsah práv tokenu",
+            "type" : "string",
+            "enum" : [
+              "payment-create",
+              "payment-all"
+            ]
+          },
+          {
+            "name" : "grant_type",
+            "in" : "formData",
+            "description" : "Vždy `client_credentials`",
+            "type" : "string",
+            "example" : "client_credentials"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "token_type" : {
+                  "type" : "string",
+                  "description" : "Vždy `bearer`",
+                  "example" : "bearer"
+                },
+                "access_token" : {
+                  "type" : "string",
+                  "description" : "Přístupový token",
+                  "example" : "AAAnu3YnAHRk298EsmyttFQMcbCcvmwTKK5hrJx2aGG8ZnFyBJhAvFWNmbWVSD7p"
+                },
+                "refresh_token" : {
+                  "type" : "string",
+                  "description" : "Obnovovací token - nepoužívá se",
+                  "example" : "xzZnu3YnAHRk298EsmyttFQMcbCcvmwTKK5hrJx2aGG8ZnFyBJhAvFWNmbWVSD7p"
+                },
+                "expires_in" : {
+                  "type" : "integer",
+                  "description" : "Životnost tokenu v sekundách",
+                  "example" : 1800
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/payment" : {
+      "post" : {
+        "summary" : "Založení platby",
+        "description" : "Založení platby. Předáním parametrů `preauthorization` a `recurrence` je platba založena jako předautorizovaná, potažmo opakovaná. Parametr `eet` je povinný, pouze pokud máte aktivní EET ve variantě B.",
+        "operationId" : "zalozeni-platby",
+        "parameters" : [
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "body",
+            "in" : "body",
+            "required" : true,
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "payer" : {
+                  "$ref" : "#/definitions/payer"
+                },
+                "target" : {
+                  "$ref" : "#/definitions/target"
+                },
+                "items" : {
+                  "type" : "array",
+                  "description" : "Detailně rozepsané jednotlivé položky objednávky",
+                  "items" : {
+                    "$ref" : "#/definitions/item"
+                  }
+                },
+                "amount" : {
+                  "type" : "integer",
+                  "description" : "Celková částka platby v háléřích/centech",
+                  "example" : 139950
+                },
+                "currency" : {
+                  "$ref" : "#/definitions/currency"
+                },
+                "order_number" : {
+                  "type" : "string",
+                  "description" : "Identifikace objednávky v rámci e-shopu, alfanumerické znaky",
+                  "maxLength" : 128,
+                  "example" : "OBJ20200825"
+                },
+                "order_description" : {
+                  "type" : "string",
+                  "description" : "Popis objednávky, alfanumerické znaky",
+                  "maxLength" : 256,
+                  "example" : "Obuv"
+                },
+                "lang" : {
+                  "$ref" : "#/definitions/lang"
+                },
+                "callback" : {
+                  "$ref" : "#/definitions/callback"
+                },
+                "additional_params" : {
+                  "type" : "array",
+                  "description" : "Doplňkové parametry platby",
+                  "maxItems" : 4,
+                  "items" : {
+                    "$ref" : "#/definitions/additional-param"
+                  }
+                },
+                "eet" : {
+                  "$ref" : "#/definitions/eet"
+                },
+                "preauthorization" : {
+                  "type" : "boolean",
+                  "description" : "Pokud se jedná o předautorizovanou platbu, je předáván s hodnotou `true`",
+                  "example" : "true"
+                },
+                "recurrence" : {
+                  "$ref" : "#/definitions/Recurrence"
+                }
+              },
+              "required" : [
+                "target",
+                "items",
+                "amount",
+                "currency",
+                "order_number"
+              ]
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "id" : {
+                  "type" : "integer",
+                  "description" : "ID platby",
+                  "example" : 3000006529
+                },
+                "order_number" : {
+                  "type" : "string",
+                  "description" : "ID objednávky",
+                  "example" : "OBJ20200825"
+                },
+                "state" : {
+                  "$ref" : "#/definitions/state"
+                },
+                "amount" : {
+                  "type" : "integer",
+                  "description" : "Celková částka platby v háléřích/centech",
+                  "example" : 139950
+                },
+                "currency" : {
+                  "$ref" : "#/definitions/currency"
+                },
+                "payer" : {
+                  "$ref" : "#/definitions/payer"
+                },
+                "target" : {
+                  "$ref" : "#/definitions/target"
+                },
+                "additional_params" : {
+                  "type" : "array",
+                  "description" : "Doplňkové parametry platby",
+                  "items" : {
+                    "$ref" : "#/definitions/additional-param"
+                  }
+                },
+                "lang" : {
+                  "$ref" : "#/definitions/lang"
+                },
+                "recurrence" : {
+                  "$ref" : "#/definitions/Recurrence"
+                },
+                "preauthorization" : {
+                  "$ref" : "#/definitions/preauthorization"
+                },
+                "gw_url" : {
+                  "type" : "string",
+                  "description" : "URL pro vyvolání platební brány",
+                  "example" : "https://gw.sandbox.gopay.com/gw/v3/bCcvmwTKK5hrJx2aGG8ZnFyBJhAvF"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/payment/{id}/refund" : {
+      "post" : {
+        "summary" : "Refundace platby",
+        "description" : "Refundace platby umožňuje navrácení finančních prostředků za již provedenou platbu zpět zákazníkovi. Refundaci je možno provést v plné výši, nebo částečnou. Pokud obchodník využívá EET ve variantě B.",
+        "operationId" : "refundace-platby",
+        "consumes" : [
+          "application/x-www-form-urlencoded"
+        ],
+        "parameters" : [
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "ID platby k refundaci",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/x-www-form-urlencoded`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/x-www-form-urlencoded"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          },
+          {
+            "name" : "amount",
+            "in" : "formData",
+            "description" : "Částka k navrácení",
+            "type" : "integer",
+            "example" : 50000
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "id" : {
+                  "type" : "integer",
+                  "description" : "ID platby",
+                  "example" : 3000006620
+                },
+                "result" : {
+                  "$ref" : "#/definitions/result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/payment/{id}" : {
+      "get" : {
+        "summary" : "Dotaz na stav platby",
+        "description" : "Funkcionalita stav platby umožní prodejnímu místu zjistit jaký je aktuální stav dříve vytvořené platby. Pokud obchodník využívá EET, je odpověď rozšířena o objekt [EET Code](#eet-code). V případě předautorizované a opakované platby obsahuje také odpověď informace o opakování platby či předautorizaci. Objekt [payer](#payer) může obsahovat údaje o platební kartě či bankovním účtu, pokud klient uhradil platbu tímto způsobem. Také může obsahovat náležitosti identifikační platby.",
+        "operationId" : "dotaz-na-stav-platby",
+        "parameters" : [
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "ID dotazované platby",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/x-www-form-urlencoded`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/x-www-form-urlencoded"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "id" : {
+                  "type" : "integer",
+                  "description" : "ID platby",
+                  "example" : 3000006529
+                },
+                "order_number" : {
+                  "type" : "string",
+                  "description" : "ID objednávky",
+                  "example" : "OBJ20200825"
+                },
+                "state" : {
+                  "$ref" : "#/definitions/state"
+                },
+                "sub_state" : {
+                  "$ref" : "#/definitions/substate"
+                },
+                "amount" : {
+                  "type" : "integer",
+                  "description" : "Celková částka platby v háléřích/centech",
+                  "example" : 139950
+                },
+                "currency" : {
+                  "$ref" : "#/definitions/currency"
+                },
+                "payment_instrument" : {
+                  "$ref" : "#/definitions/payment-instrument"
+                },
+                "payer" : {
+                  "$ref" : "#/definitions/payer"
+                },
+                "target" : {
+                  "$ref" : "#/definitions/target"
+                },
+                "additional_params" : {
+                  "type" : "array",
+                  "description" : "Doplňkové parametry platby",
+                  "items" : {
+                    "$ref" : "#/definitions/additional-param"
+                  }
+                },
+                "lang" : {
+                  "$ref" : "#/definitions/lang"
+                },
+                "recurrence" : {
+                  "$ref" : "#/definitions/Recurrence"
+                },
+                "preauthorization" : {
+                  "$ref" : "#/definitions/preauthorization"
+                },
+                "eet_code" : {
+                  "$ref" : "#/definitions/eet-code"
+                },
+                "gw_url" : {
+                  "type" : "string",
+                  "description" : "URL platební brány",
+                  "example" : " https://gw.sandbox.gopay.com/gw/v3/bCcvmwTKK5hrJx2aGG8ZnFyBJhAvF"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/payment/{id}/create-recurrence" : {
+      "post" : {
+        "summary" : "Stržení opakované platby",
+        "description" : "Pomocí požadavku je možné strhnout novou platbu na základě dříve založené opakované platby v režimu ON_DEMAND (na vyžádání).",
+        "operationId" : "strzeni-opakovane-platby",
+        "parameters" : [
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "ID zakládající platby",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          },
+          {
+            "name" : "body",
+            "in" : "body",
+            "required" : true,
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "amount" : {
+                  "type" : "integer",
+                  "description" : "Částka platby v haléřích/centech",
+                  "example" : 29900
+                },
+                "currency" : {
+                  "$ref" : "#/definitions/currency"
+                },
+                "order_number" : {
+                  "type" : "string",
+                  "description" : "Identifikace objednávky v rámci e-shopu, alfanumerické znaky",
+                  "maxLength" : 128,
+                  "example" : "OBJ20200825"
+                },
+                "order_description" : {
+                  "type" : "string",
+                  "description" : "Popis objednávky",
+                  "maxLength" : 256,
+                  "example" : "Predplatne"
+                },
+                "items" : {
+                  "type" : "array",
+                  "description" : "Detailně rozepsané jednotlivé položky objednávky",
+                  "items" : {
+                    "$ref" : "#/definitions/item"
+                  }
+                },
+                "additional_params" : {
+                  "type" : "array",
+                  "description" : "Doplňkové parametry platby",
+                  "items" : {
+                    "$ref" : "#/definitions/additional-param"
+                  }
+                },
+                "eet" : {
+                  "$ref" : "#/definitions/eet"
+                }
+              },
+              "required" : [
+                "amount",
+                "currency",
+                "order_number",
+                "items"
+              ]
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "id" : {
+                  "type" : "integer",
+                  "description" : "ID platby",
+                  "example" : 3000006621
+                },
+                "parent_id" : {
+                  "type" : "integer",
+                  "description" : "ID zakládající platby",
+                  "example" : 3000006542
+                },
+                "order_number" : {
+                  "type" : "string",
+                  "description" : "ID objednávky",
+                  "example" : "OBJ20200825"
+                },
+                "state" : {
+                  "$ref" : "#/definitions/state"
+                },
+                "amount" : {
+                  "type" : "integer",
+                  "description" : "Částka platby v haléřích/centech",
+                  "example" : 29900
+                },
+                "currency" : {
+                  "$ref" : "#/definitions/currency"
+                },
+                "payment_instrument" : {
+                  "$ref" : "#/definitions/payment-instrument"
+                },
+                "payer" : {
+                  "$ref" : "#/definitions/payer"
+                },
+                "target" : {
+                  "$ref" : "#/definitions/target"
+                },
+                "additional_params" : {
+                  "type" : "array",
+                  "description" : "Doplňkové parametry platby",
+                  "items" : {
+                    "$ref" : "#/definitions/additional-param"
+                  }
+                },
+                "lang" : {
+                  "$ref" : "#/definitions/lang"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/payment/{id}/void-recurrence" : {
+      "post" : {
+        "summary" : "Zrušení opakované platby",
+        "description" : "Umožňuje zrušit opakování dříve vytvořené platby.",
+        "operationId" : "zruseni-opakovane-platby",
+        "parameters" : [
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "ID zakládající opakované platby",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy application/x-www-form-urlencoded",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/x-www-form-urlencoded"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "id" : {
+                  "type" : "integer",
+                  "description" : "ID platby",
+                  "example" : 3000006542
+                },
+                "result" : {
+                  "$ref" : "#/definitions/result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/payment/{id}/capture" : {
+      "post" : {
+        "summary" : "Částečné stržení předautorizace",
+        "description" : "Pomocí volání je možné strhnout určitou výši částky autorizace na základě dříve vytvořené předautorizované platby. Požadovaná částka stržení nemůže být vyšší než původní částka předautorizované platby.",
+        "operationId" : "castecne-strzeni-predautorizace",
+        "parameters" : [
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "ID platby předautorizace",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          },
+          {
+            "name" : "body",
+            "in" : "body",
+            "required" : true,
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "amount" : {
+                  "type" : "integer",
+                  "description" : "Celková částka v haléřích/centech",
+                  "example" : 30000
+                },
+                "items" : {
+                  "type" : "array",
+                  "description" : "Detailně rozepsané jednotlivé položky platby",
+                  "items" : {
+                    "$ref" : "#/definitions/item"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "id" : {
+                  "type" : "integer",
+                  "description" : "ID platby",
+                  "example" : 3000006542
+                },
+                "result" : {
+                  "$ref" : "#/definitions/result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/payment/{id}/void-authorization" : {
+      "post" : {
+        "summary" : "Zrušení předautorizace",
+        "description" : "Provede uvolnění prostředků předautorizace dříve vytvořené platby.",
+        "operationId" : "zruseni-predautorizace",
+        "parameters" : [
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "ID platby předautorizace",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/x-www-form-urlencoded`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/x-www-form-urlencoded"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "id" : {
+                  "type" : "integer",
+                  "description" : "ID platby",
+                  "example" : 3000006542
+                },
+                "result" : {
+                  "$ref" : "#/definitions/result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eshops/eshop/{goid}/payment-instruments/{currency}" : {
+      "get" : {
+        "summary" : "Povolené platební metody pro měnu",
+        "description" : "Vrací seznam povolených platebních metod pro danou měnu, jejich českých popisků a log platebních metod. U bankovních převodů jsou předávány popisky a loga pro jednotlivé banky.",
+        "operationId" : "povolene-platebni-metody",
+        "parameters" : [
+          {
+            "name" : "goid",
+            "in" : "path",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "currency",
+            "in" : "path",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "groups" : {
+                  "$ref" : "#/definitions/groups"
+                },
+                "enabledPaymentInstruments" : {
+                  "type" : "array",
+                  "description" : "Seznam povolených platebních metod pro danou měnu na e-shopu, jejich popisky a loga",
+                  "items" : {
+                    "$ref" : "#/definitions/enabled-payment-instrument"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eshops/eshop/{goid}/payment-instruments" : {
+      "get" : {
+        "summary" : "Všechny povolené platební metody",
+        "description" : "Vrací seznam všech povolených platebních metod na eshopu, jejich českých popisků a log platebních metod. U bankovních převodů jsou předávány popisky a loga pro jednotlivé banky.",
+        "operationId" : "vsechny-povolene-platebni-metody",
+        "parameters" : [
+          {
+            "name" : "goid",
+            "in" : "path",
+            "required" : true,
+            "type" : "string"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "groups" : {
+                  "$ref" : "#/definitions/groups"
+                },
+                "enabledPaymentInstruments" : {
+                  "description" : "Objekt, obsahující všechny povolené platební metody na e-shopu, jejich popisky a loga"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/accounts/account-statement" : {
+      "post" : {
+        "summary" : "Výpis pohybů",
+        "description" : "Funkcionalita umožňuje generovat výpisy z GoPay obchodního účtu. Metoda vrací obsah souboru použitého formátu výpisu.",
+        "operationId" : "vypis-pohybu",
+        "produces" : [
+          "application/octet-stream"
+        ],
+        "parameters" : [
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          },
+          {
+            "name" : "body",
+            "in" : "body",
+            "required" : true,
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "date_from" : {
+                  "type" : "string",
+                  "format" : "date",
+                  "description" : "Počáteční datum výpisu",
+                  "example" : "2016-07-08"
+                },
+                "date_to" : {
+                  "type" : "string",
+                  "format" : "date",
+                  "description" : "Koncové datum výpisu",
+                  "example" : "2016-08-08"
+                },
+                "goid" : {
+                  "type" : "integer",
+                  "description" : "Jedinečný identifikátor e-shopu v systému platební brány",
+                  "example" : 8123456789
+                },
+                "currency" : {
+                  "$ref" : "#/definitions/currency"
+                },
+                "format" : {
+                  "$ref" : "#/definitions/format"
+                }
+              }
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "Jako tělo odpovědi se vrací obsah výpisu jako `application/octet-stream`"
+          }
+        }
+      }
+    },
+    "/api/payments/payment/{id}/eet-receipts" : {
+      "get" : {
+        "summary" : "EET Účtenky k platbě",
+        "description" : "Funkcionalita vrátí seznam účtenek pro danou platbu. Vrací účtenku, která se vytvořila při uhrazení platby, případně i účtenku vytvořenou při provedení refundace platby. Všechny částky jsou uvedeny v haléřích/centech.",
+        "operationId" : "eet-uctenka-k-platbe",
+        "parameters" : [
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "ID platby",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/definitions/EET-receipt"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/eet-receipts" : {
+      "post" : {
+        "summary" : "Seznam EET účtenek",
+        "description" : "Funkcionalita vrátí seznam všech účtenek za dané období pro konkrétní provozovnu. Maximální rozsah datumů je 30 dní.",
+        "operationId" : "seznam-eet-účtenek",
+        "parameters" : [
+          {
+            "name" : "Accept",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Content-Type",
+            "in" : "header",
+            "description" : "Vždy `application/json`",
+            "required" : true,
+            "type" : "string",
+            "example" : "application/json"
+          },
+          {
+            "name" : "Authorization",
+            "in" : "header",
+            "description" : "Předává se string Bearer, za kterým následuje vytvořený přístupový token",
+            "required" : true,
+            "type" : "string",
+            "example" : "Bearer AAArt6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcbNyUTvQtCv45R969"
+          },
+          {
+            "name" : "body",
+            "in" : "body",
+            "required" : true,
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "date_from" : {
+                  "type" : "string",
+                  "format" : "date",
+                  "description" : "Počáteční datum",
+                  "example" : "2017-03-01"
+                },
+                "date_to" : {
+                  "type" : "string",
+                  "format" : "date-time",
+                  "description" : "Koncové datum",
+                  "example" : "2017-03-06"
+                },
+                "id_provozovny" : {
+                  "type" : "number",
+                  "description" : "Označení provozovny",
+                  "example" : 11
+                }
+              }
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "schema" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/definitions/EET-receipt"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions" : {
+    "target" : {
+      "type" : "object",
+      "description" : "Popisuje příjemce platby/e-shop",
+      "properties" : {
+        "type" : {
+          "type" : "string",
+          "description" : "Vždy ACCOUNT",
+          "example" : "ACCOUNT"
+        },
+        "goid" : {
+          "type" : "integer",
+          "description" : "Jedinečný identifikátor eshopu v systému platební brány",
+          "example" : 8123456789
+        }
+      }
+    },
+    "item" : {
+      "type" : "object",
+      "description" : "Položka platby",
+      "properties" : {
+        "type" : {
+          "$ref" : "#/definitions/type"
+        },
+        "name" : {
+          "type" : "string",
+          "description" : "Název položky, alfanumerické znaky",
+          "maxLength" : 256,
+          "example" : "Obuv"
+        },
+        "amount" : {
+          "type" : "integer",
+          "description" : "Celková částka položek v haléřích/centech",
+          "example" : 119990
+        },
+        "count" : {
+          "type" : "integer",
+          "description" : "Počet položek",
+          "minimum" : 1,
+          "example" : 2
+        },
+        "vat_rate" : {
+          "$ref" : "#/definitions/vat-rate"
+        },
+        "ean" : {
+          "type" : "integer",
+          "description" : "EAN kód produktu",
+          "example" : 1234567890123
+        },
+        "product_url" : {
+          "type" : "string",
+          "description" : "URL adresa produktu",
+          "maxLength" : 512,
+          "example" : "https://www.eshop.cz/boty/lodicky"
+        }
+      },
+      "required" : [
+        "type",
+        "name",
+        "amount"
+      ]
+    },
+    "contact" : {
+      "type" : "object",
+      "description" : "Informace o zákazníkovi",
+      "properties" : {
+        "first_name" : {
+          "type" : "string",
+          "description" : "Jméno zákazníka",
+          "maxLength" : 256,
+          "example" : "Zbyněk"
+        },
+        "last_name" : {
+          "type" : "string",
+          "description" : "Příjmené zákazníka",
+          "maxLength" : 256,
+          "example" : "Žák"
+        },
+        "email" : {
+          "type" : "string",
+          "description" : "Validní e-mail zákazníka",
+          "maxLength" : 128,
+          "example" : "test@test.cz"
+        },
+        "phone_number" : {
+          "type" : "string",
+          "description" : "Telefonní číslo zákazníka s předvolbou",
+          "maxLength" : 128,
+          "example" : "+420777456123"
+        },
+        "city" : {
+          "type" : "string",
+          "description" : "Město zákazníka",
+          "maxLength" : 128,
+          "example" : "České Budějovice"
+        },
+        "street" : {
+          "type" : "string",
+          "description" : "Ulice zákazníka",
+          "maxLength" : 128,
+          "example" : "Planá 67"
+        },
+        "postal_code" : {
+          "type" : "string",
+          "description" : "Poštovní směrovací číslo zákazníka",
+          "maxLength" : 16,
+          "example" : "37301"
+        },
+        "country_code" : {
+          "type" : "string",
+          "description" : "Třípísmenný kód státu zákazníka podle standardu ISO 3166-1 alpha-3",
+          "example" : "CZE"
+        }
+      }
+    },
+    "payer" : {
+      "type" : "object",
+      "description" : "Objekt popisující údaje o zákazníkovi a nastavení platebních metod pro danou platbu. Objekty `payment_card` a `bank_account` jsou vraceny v dotazu na stav platby, pokud klient touto metodou platbu zaplatil. Paramtery `verify_pin` a `allowed_card_token` jsou používány pouze u identifikační platby.\nParametr `email` přímo v objektu `payer` je vracen pouze u platební metody `GOPAY` a jedná se o e-mail použité peněženky.",
+      "properties" : {
+        "allowed_payment_instruments" : {
+          "type" : "array",
+          "description" : "Seznam povolených platebních metod",
+          "items" : {
+            "$ref" : "#/definitions/payment-instrument"
+          },
+          "example" : "[\"PAYMENT_CARD\",\"BANK_ACCOUNT\"]"
+        },
+        "default_payment_instrument" : {
+          "$ref" : "#/definitions/payment-instrument"
+        },
+        "allowed_swifts" : {
+          "type" : "array",
+          "description" : "Seznam povolených SWIFTů pro online bankovní převody",
+          "items" : {
+            "$ref" : "#/definitions/swift"
+          },
+          "example" : "[\"FIOBCZPP\",\"BREXCZPP\"]"
+        },
+        "default_swift" : {
+          "$ref" : "#/definitions/swift"
+        },
+        "contact" : {
+          "$ref" : "#/definitions/contact"
+        },
+        "bank_account" : {
+          "$ref" : "#/definitions/bank-account",
+          "readOnly" : true
+        },
+        "payment_card" : {
+          "$ref" : "#/definitions/payment-card",
+          "readOnly" : true
+        },
+        "verify_pin" : {
+          "type" : "string",
+          "description" : "PIN pro účely identifikační platby",
+          "example" : "1234"
+        },
+        "allowed_card_token" : {
+          "type" : "string",
+          "description" : "Token pro účely identifikační platby",
+          "example" : "6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcb"
+        },
+        "email" : {
+          "type" : "string",
+          "description" : "Email použité GoPay peněženky (pouze u platební metody `GOPAY`)",
+          "example" : "test@test.cz"
+        }
+      }
+    },
+    "callback" : {
+      "type" : "object",
+      "description" : "Popisuje adresy, na které bude předáváno ID vytvořené platby - návratovou adresu pro klienta a notifikační URL.",
+      "properties" : {
+        "return_url" : {
+          "type" : "string",
+          "description" : "URL pro návrat klienta z platební brány do e-shopu (včetně protokolu)",
+          "maxLength" : 512,
+          "example" : "https://www.example.com/return"
+        },
+        "notification_url" : {
+          "type" : "string",
+          "description" : "URL pro zasílání asynchronních HTTP notifikací",
+          "maxLength" : 512,
+          "example" : "https://www.example.com/notify"
+        }
+      }
+    },
+    "payment-card" : {
+      "type" : "object",
+      "description" : "Objekt popisující údaje o platební kartě. Pouze pro čtení, vracen v dotazu na stav platby, pokud zákazník platil kartou. Parametry `card_token` a `3ds_result` jsou předávány pouze u dotazu na stav [identifikační platby](#identifikacni-platby)",
+      "properties" : {
+        "card_number" : {
+          "type" : "string",
+          "description" : "Vymaskované číslo karty",
+          "example" : "444444******4448"
+        },
+        "card_expiration" : {
+          "type" : "string",
+          "description" : "Datum expirace",
+          "example" : "1909"
+        },
+        "card_brand" : {
+          "type" : "string",
+          "description" : "Asociace platební karty",
+          "example" : "VISA"
+        },
+        "card_issuer_country" : {
+          "type" : "string",
+          "description" : "Země vydání platební karty",
+          "example" : "CZE"
+        },
+        "card_issuer_bank" : {
+          "type" : "string",
+          "description" : "Vydavatelská banka",
+          "example" : "AIR BANK, A.S."
+        },
+        "card_token" : {
+          "type" : "string",
+          "description" : "Token platební karty, pouze u identifikační platby",
+          "example" : "6RuTM69kX6UUGZ6p9hyMPrTUVXmMDdkC4BNnQvQcb"
+        },
+        "3ds_result" : {
+          "$ref" : "#/definitions/3ds-result"
+        }
+      }
+    },
+    "bank-account" : {
+      "type" : "object",
+      "description" : "Údaje o bankovním účtu plátce. Pouze pro čtení, vracen v dotazu na stav platby, pokud klient platil účtem. IBAN a SWIFT jsou předávány pouze u zahraničních účtů.",
+      "properties" : {
+        "prefix" : {
+          "type" : "string",
+          "description" : "Předčíslí účtu",
+          "example" : "670100"
+        },
+        "account_number" : {
+          "type" : "string",
+          "description" : "Číslo účtu v domestic formátu",
+          "example" : "7654322"
+        },
+        "bank_code" : {
+          "type" : "string",
+          "description" : "Kód banky v domestic formátu",
+          "example" : "0200"
+        },
+        "iban" : {
+          "type" : "string",
+          "description" : "IBAN",
+          "example" : "SK4202006700000007654322"
+        },
+        "bic" : {
+          "type" : "string",
+          "description" : "SWIFT/BIC",
+          "example" : "SUBASKPP"
+        },
+        "account_name" : {
+          "type" : "string",
+          "description" : "Jméno majitele účtu",
+          "example" : "JAN NOVAK"
+        }
+      }
+    },
+    "additional-param" : {
+      "type" : "object",
+      "description" : "Dodatečné parametry platby",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "description" : "Název parametru",
+          "example" : "invoicenumber"
+        },
+        "value" : {
+          "type" : "string",
+          "description" : "Hodnota parametru",
+          "example" : "2015001003"
+        }
+      }
+    },
+    "Recurrence" : {
+      "type" : "object",
+      "description" : "Objekt popisující opakování platby. U opakované platby ON_DEMAND se nepředává parametr `recurrence_period`. Parametr `recurrence_state` je vracen v dotazu na stav platby.",
+      "properties" : {
+        "recurrence_cycle" : {
+          "$ref" : "#/definitions/recurrence-cycle"
+        },
+        "recurrence_period" : {
+          "type" : "integer",
+          "description" : "Perioda opakování platby",
+          "example" : 12
+        },
+        "recurrence_date_to" : {
+          "type" : "string",
+          "format" : "date",
+          "description" : "Doba platnosti opakované platby\t(výlučně do) ve formátu `YYYY-MM-DD`",
+          "example" : "2025-12-31"
+        },
+        "recurrence_state" : {
+          "$ref" : "#/definitions/recurrence-state",
+          "readOnly" : true
+        }
+      }
+    },
+    "preauthorization" : {
+      "type" : "object",
+      "description" : "Objekt popisující předautorizaci platby",
+      "properties" : {
+        "requested" : {
+          "type" : "boolean",
+          "description" : "Zda byla předautorizace založena",
+          "example" : true
+        },
+        "state" : {
+          "$ref" : "#/definitions/preauthorization_state"
+        }
+      }
+    },
+    "eet" : {
+      "type" : "object",
+      "description" : "Parametry pro elektronickou evidenci tržeb (EET). Všechny částky jsou uvedené v haléřích/centech.",
+      "properties" : {
+        "zakl_nepodl_dph" : {
+          "type" : "integer",
+          "description" : "Celková částka plnění osvobozených od DPH"
+        },
+        "zakl_dan1" : {
+          "type" : "integer",
+          "description" : "Celkový základ daně se základní sazbou DPH 21%",
+          "example" : 99165
+        },
+        "dan1" : {
+          "type" : "integer",
+          "description" : "Celková DPH se základní sazbou 21%",
+          "example" : 20825
+        },
+        "zakl_dan2" : {
+          "type" : "integer",
+          "description" : "Celkový základ daně s první sníženou sazbou DPH 15%",
+          "example" : 17357
+        },
+        "dan2" : {
+          "type" : "integer",
+          "description" : "Celková DPH s první sníženou sazbou 15%",
+          "example" : 2604
+        },
+        "zakl_dan3" : {
+          "type" : "integer",
+          "description" : "Celkový základ daně s druhou sníženou sazbou DPH 10%"
+        },
+        "dan3" : {
+          "type" : "integer",
+          "description" : "Celková DPH s druhou sníženou sazbou 10%"
+        },
+        "celk_trzba" : {
+          "type" : "integer",
+          "description" : "Celková částka tržby",
+          "example" : 139951
+        },
+        "mena" : {
+          "$ref" : "#/definitions/currency"
+        },
+        "dic_poverujiciho" : {
+          "type" : "string",
+          "description" : "DIČ pověřujícího poplatníka"
+        },
+        "pouzit_zboz1" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro prodej použitého zboží se základní sazbou"
+        },
+        "pouzit_zboz2" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro prodej použitého zboží s první sníženou sazbou"
+        },
+        "pouzit_zboz3" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro prodej použitého zboží s druhou sníženou sazbou"
+        },
+        "cest_sluz" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro cestovní službu"
+        },
+        "urceno_cerp_zuct" : {
+          "type" : "integer",
+          "description" : "Celková částka plateb určená k následnému čerpání nebo zúčtování"
+        },
+        "cerp_zuct" : {
+          "type" : "integer",
+          "description" : "Celková částka plateb, které jsou následným čerpáním nebo zúčtováním platby"
+        }
+      }
+    },
+    "eet-code" : {
+      "type" : "object",
+      "description" : "Kódy EET účtenky",
+      "properties" : {
+        "fik" : {
+          "type" : "string",
+          "description" : "Fiskální identifikační kód (FIK)",
+          "example" : "28da0811-e050-46c7-a62c-aa456d1f07ef-ff"
+        },
+        "bkp" : {
+          "type" : "string",
+          "description" : "Bezpečnostní kód poplatníka (BKP)",
+          "example" : "5d874afc-251f8661-ff0e0b13-c7cd8793-6bf0386a"
+        },
+        "pkp" : {
+          "type" : "string",
+          "description" : "Podpisový kód poplatníka (PKP)",
+          "example" : "Ca8sTbURReQjjgcy/znXBKjPOnZof3AxWK5WySpyMrUXF0o7cz1BP6a....."
+        }
+      }
+    },
+    "EET-receipt" : {
+      "type" : "object",
+      "description" : "Detaily EET účtenky.",
+      "properties" : {
+        "dic_poverujiciho" : {
+          "type" : "string",
+          "description" : "DIČ pověřujícího poplatníka"
+        },
+        "celk_trzba" : {
+          "type" : "integer",
+          "description" : "Celková částka tržby",
+          "example" : 139951
+        },
+        "zakl_nepodl_dph" : {
+          "type" : "integer",
+          "description" : "Celková částka plnění osvobozených od DPH"
+        },
+        "zakl_dan1" : {
+          "type" : "integer",
+          "description" : "Celkový základ daně se základní sazbou DPH",
+          "example" : 99160
+        },
+        "dan1" : {
+          "type" : "integer",
+          "description" : "Celková DPH se základní sazbou",
+          "example" : 20830
+        },
+        "zakl_dan2" : {
+          "type" : "integer",
+          "description" : "Celkový základ daně s první sníženou sazbou DPH",
+          "example" : 17358
+        },
+        "dan2" : {
+          "type" : "integer",
+          "description" : "Celková DPH s první sníženou sazbou",
+          "example" : 2603
+        },
+        "zakl_dan3" : {
+          "type" : "integer",
+          "description" : "Celkový základ daně s druhou sníženou sazbou DPH"
+        },
+        "dan3" : {
+          "type" : "integer",
+          "description" : "Celková DPH s druhou sníženou sazbou"
+        },
+        "cest_sluz" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro cestovní službu"
+        },
+        "pouzit_zboz1" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro prodej použitého zboží se základní sazbou"
+        },
+        "pouzit_zboz2" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro prodej použitého zboží s první sníženou sazbou"
+        },
+        "pouzit_zboz3" : {
+          "type" : "integer",
+          "description" : "Celková částka v režimu DPH pro prodej použitého zboží s druhou sníženou sazbou"
+        },
+        "urceno_cerp_zuct" : {
+          "type" : "integer",
+          "description" : "Celková částka plateb určená k následnému čerpání nebo zúčtování"
+        },
+        "cerp_zuct" : {
+          "type" : "string",
+          "description" : "Celková částka plateb, které jsou následným čerpáním nebo zúčtováním platby"
+        },
+        "payment_id" : {
+          "type" : "integer",
+          "description" : "ID platby",
+          "example" : 3048468774
+        },
+        "state" : {
+          "$ref" : "#/definitions/receipt-state"
+        },
+        "date_last_attempt" : {
+          "type" : "string",
+          "format" : "date-time",
+          "description" : "Datum a čas posledního pokusu o evidenci",
+          "example" : "2017-03-03T15:21:00.450+0100"
+        },
+        "date_next_attempt" : {
+          "type" : "string",
+          "format" : "date-time",
+          "description" : "Datum a čas dalšího pokusu o evidenci",
+          "example" : "2017-03-03T15:21:00.226+0100"
+        },
+        "eet_mode" : {
+          "$ref" : "#/definitions/eet-mode"
+        },
+        "uuid_zprava" : {
+          "type" : "string",
+          "format" : "uuid",
+          "description" : "UUID zprávy",
+          "example" : "e382c8e5-195f-4b30-b6f4-eef15899240f"
+        },
+        "date_odesl" : {
+          "type" : "string",
+          "format" : "date-time",
+          "description" : "Datum a čas odeslání EET účtenky",
+          "example" : "2017-03-03T15:21:00.241+0100"
+        },
+        "dic_popl" : {
+          "type" : "string",
+          "description" : "DIČ poplatníka",
+          "example" : "CZ1212121218"
+        },
+        "id_provoz" : {
+          "type" : "integer",
+          "description" : "Označení provozovny",
+          "example" : 11
+        },
+        "id_pokl" : {
+          "type" : "string",
+          "description" : "Označení pokladního zařízení",
+          "example" : "1"
+        },
+        "dat_trzby" : {
+          "type" : "string",
+          "format" : "date-time",
+          "description" : "Datum a čas přijetí tržby",
+          "example" : "2017-03-03T15:21:00.162+0100"
+        },
+        "porad_cis" : {
+          "type" : "integer",
+          "description" : "Pořadové číslo účtenky",
+          "example" : 3048468774
+        },
+        "fik" : {
+          "type" : "string",
+          "example" : "5f4286a4-ab97-496f-b860-cd8542911449-ff"
+        },
+        "bkp" : {
+          "type" : "string",
+          "example" : "713FB9FD-8EC9D865-4F6E5A49-68992939-408F9E59"
+        },
+        "pkp" : {
+          "type" : "string",
+          "example" : "Kzvh4JmZszaytn1XPy1wTKpJ2eqtxyQsHRlULOgKbJBPrXVeNw18uwzA1/JxViPEFKdGBRsImKH5Y4V07ZrekVs5HZGK11h+mww4P6q2KtA79/CO9S7NnBr44vwesK5PXX6gcSq4p0ptk6H5uTpmsyCxQjVesNXI1m5zduxQ93SoaZ/3kMBbhUaaqekMvxKpsxgtlbm8h8J6Fh+jvkF2NyPkEfgTyI/s9OuEq6JQ8rvTcTpz3phNXX+Cvb3oJpSNk8mtn3/uo6a/hmgdpG+W3f8pwUFZ1hQ0A5+/jyrv+pURS67l3Mh+ElUVLBEE2/Iai/jqxjklGeAa8hjQowsy3g=="
+        },
+        "kody_chyby" : {
+          "type" : "integer",
+          "description" : "Chyba způsobená při komunikaci se službou EET"
+        },
+        "error_code" : {
+          "type" : "integer",
+          "description" : "Kód chyby EET"
+        },
+        "kody_varovani" : {
+          "type" : "string",
+          "description" : "Kód varování EET"
+        }
+      }
+    },
+    "group-code" : {
+      "type" : "object",
+      "description" : "Obsahuje popisky skupiny platebních metod.",
+      "properties" : {
+        "label" : {
+          "type" : "object",
+          "description" : "Popis platební metody",
+          "properties" : {
+            "cs" : {
+              "type" : "string",
+              "description" : "Název platební metody v češtině",
+              "example" : "Platební karta"
+            }
+          }
+        }
+      }
+    },
+    "groups" : {
+      "description" : "Seznam všech skupin povolených platebních metod."
+    },
+    "enabled-swift" : {
+      "type" : "object",
+      "description" : "Popisuje povolené swifty pro bankovní převody.",
+      "properties" : {
+        "image" : {
+          "type" : "object",
+          "description" : "Ikony banky",
+          "properties" : {
+            "large" : {
+              "type" : "string",
+              "description" : "URL velké ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/GIBACZPX@2x.png"
+            },
+            "normal" : {
+              "type" : "string",
+              "description" : "URL menší ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/GIBACZPX.png"
+            }
+          }
+        },
+        "isOnline" : {
+          "type" : "boolean",
+          "description" : "Zda je pro tento SWIFT možný online bankovní převod",
+          "example" : true
+        },
+        "label" : {
+          "type" : "object",
+          "description" : "Popisek platební metody",
+          "properties" : {
+            "cs" : {
+              "type" : "string",
+              "description" : "Český popisek",
+              "example" : "Platba 24"
+            }
+          }
+        },
+        "swift" : {
+          "type" : "string",
+          "description" : "SWIFT banky",
+          "example" : "GIBACZPX"
+        }
+      }
+    },
+    "enabled-payment-instrument" : {
+      "type" : "object",
+      "description" : "Popisuje povolené platební metody.",
+      "properties" : {
+        "enabledSwifts" : {
+          "type" : "array",
+          "description" : "Řada objektů popisující jednotlivé povolené SWIFTY (pouze pro bankovní převody)",
+          "items" : {
+            "$ref" : "#/definitions/enabled-swift"
+          }
+        },
+        "group" : {
+          "$ref" : "#/definitions/group"
+        },
+        "image" : {
+          "type" : "object",
+          "description" : "Ikony platební metody",
+          "properties" : {
+            "large" : {
+              "type" : "string",
+              "description" : "URL velké ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/payment_card@2x.png"
+            },
+            "normal" : {
+              "type" : "string",
+              "description" : "URL malé ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/payment_card.png"
+            }
+          }
+        },
+        "label" : {
+          "type" : "object",
+          "description" : "Popisky platební metody",
+          "properties" : {
+            "cs" : {
+              "type" : "string",
+              "description" : "Český popisek",
+              "example" : "Platební karta"
+            }
+          }
+        },
+        "paymentInstrument" : {
+          "$ref" : "#/definitions/payment-instrument"
+        }
+      }
+    },
+    "Enabled swift -all" : {
+      "type" : "object",
+      "description" : "Popisuje povolené swifty pro bankovní převody.",
+      "properties" : {
+        "image" : {
+          "type" : "object",
+          "description" : "Ikony banky",
+          "properties" : {
+            "large" : {
+              "type" : "string",
+              "description" : "URL velké ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/GIBACZPX@2x.png"
+            },
+            "normal" : {
+              "type" : "string",
+              "description" : "URL menší ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/GIBACZPX.png"
+            }
+          }
+        },
+        "isOnline" : {
+          "type" : "boolean",
+          "description" : "Zda je pro tento SWIFT možný online bankovní převod",
+          "example" : true
+        },
+        "label" : {
+          "type" : "object",
+          "description" : "Popisek platební metody",
+          "properties" : {
+            "cs" : {
+              "type" : "string",
+              "description" : "Český popisek",
+              "example" : "Platba 24"
+            }
+          }
+        },
+        "swift" : {
+          "type" : "string",
+          "description" : "SWIFT banky",
+          "example" : "GIBACZPX"
+        },
+        "currencies" : { }
+      }
+    },
+    "Enabled payment instruments -all" : {
+      "type" : "object",
+      "description" : "Popisuje povolené platební metody pro všechny měny.",
+      "properties" : {
+        "enabledSwifts" : {
+          "description" : "Objekt, popisující povolené SWIFTy pro bankovní převod. Názvy parametrů nabývají hodnot z číselníku [Swift](#swift)"
+        },
+        "group" : {
+          "$ref" : "#/definitions/group"
+        },
+        "image" : {
+          "type" : "object",
+          "description" : "Ikony platební metody",
+          "properties" : {
+            "large" : {
+              "type" : "string",
+              "description" : "URL velké ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/bank_account@2x.png"
+            },
+            "normal" : {
+              "type" : "string",
+              "description" : "URL malé ikony",
+              "example" : "https://gate.gopay.cz/images/checkout/bank_account.png"
+            }
+          }
+        },
+        "label" : {
+          "type" : "object",
+          "description" : "Popisky platební metody",
+          "properties" : {
+            "cs" : {
+              "type" : "string",
+              "description" : "Český popisek",
+              "example" : "Bankovní platba"
+            }
+          }
+        },
+        "currencies" : {
+          "type" : "array",
+          "description" : "Měny, pro které je daná platební metoda dosupná",
+          "items" : {
+            "$ref" : "#/definitions/currency"
+          }
+        }
+      }
+    },
+    "currency" : {
+      "type" : "string",
+      "description" : "Seznam dostupných měn",
+      "enum" : [
+        "CZK",
+        "EUR",
+        "PLN",
+        "USD",
+        "GBP",
+        "HUF",
+        "RON",
+        "BGN",
+        "HRK"
+      ]
+    },
+    "payment-instrument" : {
+      "type" : "string",
+      "description" : "Seznam dostupných platebních metod",
+      "enum" : [
+        "PAYMENT_CARD",
+        "BANK_ACCOUNT",
+        "GPAY",
+        "APPLE_PAY",
+        "GOPAY",
+        "PAYPAL",
+        "MPAYMENT",
+        "PRSMS",
+        "PAYSAFECARD",
+        "BITCOIN"
+      ]
+    },
+    "swift" : {
+      "type" : "string",
+      "description" : "Seznam dostupných SWIFT/BIC kódů pro účely určení platebních metod.",
+      "enum" : [
+        "GIBACZPX",
+        "KOMBCZPP",
+        "RZBCCZPP",
+        "FIOBCZPP",
+        "BACXCZPP",
+        "BREXCZPP",
+        "CEKOCZPP",
+        "CEKOCZPP-ERA",
+        "AGBACZPP",
+        "AIRACZPP",
+        "EQBKCZPP",
+        "TATRSKBX",
+        "SUBASKBX",
+        "UNCRSKBX",
+        "GIBASKBX",
+        "POBNSKBA"
+      ]
+    },
+    "state" : {
+      "type" : "string",
+      "description" : "Seznam možných stavů plateb",
+      "enum" : [
+        "CREATED",
+        "PAID",
+        "CANCELED",
+        "PAYMENT_METHOD_CHOSEN",
+        "TIMEOUTED",
+        "AUTHORIZED",
+        "REFUNDED",
+        "PARTIALLY_REFUNDED"
+      ]
+    },
+    "substate" : {
+      "type" : "string",
+      "description" : "Seznam podstavů plateb",
+      "enum" : [
+        "_101",
+        "_102",
+        "_3001",
+        "_3002",
+        "_3003",
+        "_5001",
+        "_5002",
+        "_5003",
+        "_5004",
+        "_5005",
+        "_5006",
+        "_5007",
+        "_5008",
+        "_5009",
+        "_5015",
+        "_5017",
+        "_5018",
+        "_5019",
+        "_6502",
+        "_6504",
+        "_5010",
+        "_5014",
+        "_5011",
+        "_5036",
+        "_5012",
+        "_5013",
+        "_5016",
+        "_5020",
+        "_5021",
+        "_5022",
+        "_5023",
+        "_5038",
+        "_5024",
+        "_5025",
+        "_5026",
+        "_5027",
+        "_5028",
+        "_5029",
+        "_5030",
+        "_5031",
+        "_5033",
+        "_5035",
+        "_5037",
+        "_5039",
+        "_5040",
+        "_5041",
+        "_5042",
+        "_5043",
+        "_5044",
+        "_5045",
+        "_5046",
+        "_5047",
+        "_5048"
+      ]
+    },
+    "type" : {
+      "type" : "string",
+      "description" : "Typy položek platby",
+      "enum" : [
+        "ITEM",
+        "DELIVERY",
+        "DISCOUNT"
+      ]
+    },
+    "scope" : {
+      "type" : "string",
+      "description" : "Rozsah práv tokenu",
+      "enum" : [
+        "payment-create",
+        "payment-all"
+      ]
+    },
+    "lang" : {
+      "type" : "string",
+      "description" : "Jazyk rozhraní platební brány",
+      "enum" : [
+        "CS",
+        "SK",
+        "EN",
+        "DE",
+        "RU",
+        "PL",
+        "HU",
+        "RO",
+        "BG",
+        "HR",
+        "IT",
+        "FR",
+        "ES"
+      ]
+    },
+    "vat-rate" : {
+      "type" : "integer",
+      "description" : "Daňové sazby pro Českou Republiku",
+      "enum" : [
+        "0",
+        "10",
+        "15",
+        "21"
+      ]
+    },
+    "result" : {
+      "type" : "string",
+      "description" : "Popis výsledku operace",
+      "enum" : [
+        "ACCEPTED",
+        "FINISHED",
+        "FAILED"
+      ]
+    },
+    "recurrence-cycle" : {
+      "type" : "string",
+      "description" : "Cyklus opakovaných plateb",
+      "enum" : [
+        "DAY",
+        "WEEK",
+        "MONTH",
+        "ON_DEMAND"
+      ]
+    },
+    "recurrence-state" : {
+      "type" : "string",
+      "description" : "Popisuje stav opakování platby",
+      "enum" : [
+        "REQUESTED",
+        "STARTED",
+        "STOPPED"
+      ]
+    },
+    "preauthorization_state" : {
+      "type" : "string",
+      "description" : "Popisuje stav předautorizace platby.",
+      "enum" : [
+        "REQUESTED",
+        "AUTHORIZED",
+        "CAPTURED",
+        "CANCELED"
+      ]
+    },
+    "format" : {
+      "type" : "string",
+      "description" : "Formát vygenerovaného výpisu",
+      "enum" : [
+        "CSV_A",
+        "CSV_B",
+        "CSV_C",
+        "CSV_D",
+        "XLS_A",
+        "XLS_B",
+        "XLS_C",
+        "ABO_A",
+        "ABO_B"
+      ]
+    },
+    "receipt-state" : {
+      "type" : "string",
+      "description" : "Popis stavu EET účtenky",
+      "enum" : [
+        "CREATED",
+        "DELIVERY_FAILED",
+        "DELIVERED"
+      ]
+    },
+    "eet-mode" : {
+      "type" : "string",
+      "description" : "Varianta EET",
+      "enum" : [
+        "AUTO",
+        "EET"
+      ]
+    },
+    "3ds-result" : {
+      "type" : "string",
+      "description" : "Výsledek 3D Secure autorizace",
+      "enum" : [
+        "N/",
+        "Y/Y",
+        "Y/A",
+        "X/X"
+      ]
+    },
+    "group" : {
+      "type" : "string",
+      "description" : "Číselník skupin platebních metod.",
+      "enum" : [
+        "card-payment",
+        "bank-transfer",
+        "wallet",
+        "others"
+      ]
+    },
+    "HTTP-result-kody" : {
+      "type" : "integer",
+      "enum" : [
+        "200",
+        "403",
+        "404",
+        "409",
+        "500"
+      ]
+    },
+    "error" : {
+      "type" : "object",
+      "description" : "Objekt popisující chybu",
+      "properties" : {
+        "scope" : {
+          "$ref" : "#/definitions/error-scope"
+        },
+        "field" : {
+          "type" : "string",
+          "description" : "Kterého parametru se chyba týká, pokud se nejedná o globální chybu",
+          "example" : "email"
+        },
+        "message" : {
+          "type" : "string",
+          "description" : "Lokalizovaný message. Lokalizace založená na Accept-Language v hlavičce. Deafultně je nastaveno na en-US, dále je možné použít českou lokalizaci pomocí hlavičky Accept-Language: cs.",
+          "example" : "\"E-mail jiz existuje.\""
+        },
+        "description" : {
+          "type" : "string",
+          "description" : "Technický popis chyby"
+        },
+        "error_code" : {
+          "$ref" : "#/definitions/error-code"
+        },
+        "error_name" : {
+          "type" : "string",
+          "description" : "Kódové označení typu chyby",
+          "example" : "NOT_UNIQUE"
+        }
+      }
+    },
+    "error-scope" : {
+      "type" : "string",
+      "description" : "Popis rozsahu chyby",
+      "enum" : [
+        "F",
+        "G"
+      ]
+    },
+    "error-code" : {
+      "type" : "integer",
+      "description" : "Chybové kódy, popisující důvod výskytu chyby",
+      "enum" : [
+        "100",
+        "110",
+        "111",
+        "112",
+        "113",
+        "114",
+        "115",
+        "116",
+        "200",
+        "201",
+        "202",
+        "203",
+        "301",
+        "302",
+        "303",
+        "304",
+        "305",
+        "321",
+        "330",
+        "331",
+        "332",
+        "333",
+        "340",
+        "341",
+        "342",
+        "343",
+        "350",
+        "351",
+        "352",
+        "353",
+        "360",
+        "394"
+      ]
+    }
+  }
+}
